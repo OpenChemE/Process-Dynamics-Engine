@@ -10,7 +10,7 @@ class Model:
         self.outputs = outputs
 
     def __repr__(self):
-        return 'System: \n {}'.format(self.system)
+        return 'Model name: {0}\n{1}'.format(self.name, self.system)
 
     @property
     def system(self):

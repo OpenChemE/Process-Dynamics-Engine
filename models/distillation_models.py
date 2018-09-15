@@ -1,6 +1,6 @@
 import control
-from .model import Model
-from .tag import Tag
+from pde.model import Model
+from pde.tag import Tag
 
 def WoodBerry():
 	g_tf = control.tf([12.8], [16.7,1])
