@@ -20,3 +20,36 @@ PDE design notes:
 4. Containerized and scalable
 
 The development of PDE is funded by a University of British Columbia Teaching and Learning Enhancement Fund (TLEF) 2018/2019 grant.
+
+# Usage
+**Project under active development, please wait for stable version.**
+
+1. Clone repository
+
+```
+git clone https://github.com/OpenChemE/Process-Dynamics-Engine.git
+```
+
+2. Install package
+
+```python
+pip install .
+```
+
+3. Navigate to the repository in your folder and try importing the Wood-Berry distillation model (See the Toy Model notebook)
+
+```python
+import pde
+from models.distillation_models import WoodBerry
+```
+
+4. Create a simulation from the model
+```python
+distillation = pde.Simulation(WoodBerry(), uid='0')
+distillation.activate()
+```
+
+5. Step through the simulation
+```
+distillation.step()
+```
