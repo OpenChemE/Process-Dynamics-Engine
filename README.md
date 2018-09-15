@@ -6,6 +6,11 @@ Process Dynamics Engine (PDE) is an online, real-time simulator for process cont
 
 Real world processes can be organized by the hierarchy of process controls as shown in the pyramid below. The plant is at the base layer, followed by the measurements layer with sensors and transmitters and a controls layer using consoles or panels with either manual operator control or automated loops.
 
+![https://upload.wikimedia.org/wikipedia/commons/1/10/Functional_levels_of_a_Distributed_Control_System.svg](https://upload.wikimedia.org/wikipedia/commons/1/10/Functional_levels_of_a_Distributed_Control_System.svg)
+*Source: https://en.wikipedia.org/wiki/Process_control*
+
+**TODO: update diagram**
+
 The design of PDE mimics real world processes with an Engine component that runs the simulation (Plant) and a Graphics component (Panel) for visualizing and manipulating process variables. Users can also interact with the simulation through the Graphics component or directly with the Engine's API.
 
 PDE design notes:
