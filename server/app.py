@@ -1,4 +1,4 @@
-import tornado.gen, tornado.ioloop, tornado.web
+import tornado.gen, tornado.ioloop, tornado.web, tornado.websocket
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -45,6 +45,24 @@ class TagGetHandler(tornado.web.RequestHandler):
         pass
 
 
+class WebSocketHandler(tornado.websocket.WebSocketHandler):
+
+    def check_origin(self, origin):
+        # Allow access from local development server.
+        if origin == 'file://':
+            return True
+        return False
+
+    def open(self, socket_id):
+        pass
+
+    def on_message(self, message):
+        pass
+
+    def on_close(self):
+        pass
+
+
 def make_app():
     return tornado.web.Application([
         (r'/', MainHandler),
@@ -52,7 +70,8 @@ def make_app():
         (r'/models/(\d+)/?', ModelCreateHandler),
         (r'/sims/all/?', SimulationListHandler),
         (r'/sims/(\d+)/?', SimulationGetHandler),
-        (r'/sims/(\d+)/(\d+)/?', TagGetHandler)
+        (r'/sims/(\d+)/(\d+)/?', TagGetHandler),
+        (r'/([0-9a-f\-]+)', WebSocketHandler)
     ])
 
 
