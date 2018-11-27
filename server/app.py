@@ -1,4 +1,6 @@
+import uuid
 import tornado.gen, tornado.ioloop, tornado.web, tornado.websocket
+from models import Model, Session, Simulation
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -24,7 +26,17 @@ class ModelListHandler(tornado.web.RequestHandler):
 class ModelCreateHandler(tornado.web.RequestHandler):
 
     def post(self, model_id):
-        pass
+        session = Session()
+        try:
+            socket_id = str(uuid.uuid4())
+            sim = Simulation(model_id=model_id, socket_id=socket_id)
+            session.add(sim)
+            session.commit()
+        except:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 class SimulationListHandler(tornado.web.RequestHandler):
@@ -64,6 +76,18 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
 
 def make_app():
+    # TODO: this is temporary code to initialize the available models
+    session = Session()
+    try:
+        model = Model(name='Wood-Berry Distillation')
+        session.add(model)
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
     return tornado.web.Application([
         (r'/', MainHandler),
         (r'/models/all/?', ModelListHandler),
