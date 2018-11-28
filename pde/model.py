@@ -41,7 +41,7 @@ class Model:
     def inputs(self, value):
         if not isinstance(value, dict):
             raise TypeError("Inputs must be an ordered dictionary")
-        elif not all(tag.IOtype is "INPUT" for tag in value.values()):
+        elif not all(tag.IOtype == "INPUT" for tag in value.values()):
             raise ValueError(
                 "All tags in input array must have an IOtype of 'INPUT'")
         elif not len(value) is self.system.inputs:
@@ -57,7 +57,7 @@ class Model:
     def outputs(self, value):
         if not isinstance(value, dict):
             raise ValueError("Outputs must be an ordered dictionary")
-        elif not all(tag.IOtype is "OUTPUT" for tag in value.values()):
+        elif not all(tag.IOtype == "OUTPUT" for tag in value.values()):
             raise ValueError(
                 "All tags in output array must have an IOtype of 'OUTPUT'")
         elif not len(value) is self.system.outputs:

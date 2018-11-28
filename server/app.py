@@ -79,13 +79,19 @@ def make_app():
     # TODO: this is temporary code to initialize the available models
     session = Session()
     try:
-        model = Model(name='Wood-Berry Distillation')
-        session.add(model)
+        f = open('wood_berry.pkl', 'rb')
+        pickled_model = pickle.load(f)
+        session.add(Model(
+                name='Wood-Berry Distillation',
+                system=pickled_model.system,
+                inputs=pickled_model.inputs,
+                outputs=pickled_model.outputs))
         session.commit()
     except:
         session.rollback()
         raise
     finally:
+        f.close()
         session.close()
 
     return tornado.web.Application([
