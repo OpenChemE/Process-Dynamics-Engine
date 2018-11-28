@@ -31,6 +31,8 @@ class Simulation(Base):
     id = Column(Integer, primary_key=True)
     model_id = Column(Integer, ForeignKey('models.id'))
     socket_id = Column(String(36), index=True)
+    locked = Column(Boolean)
+    data = Column(PickleType)
 
     def __repr__(self):
         return f"<Simulation(id={self.id}, " + \

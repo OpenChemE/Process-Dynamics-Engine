@@ -1,6 +1,8 @@
-import uuid
+import json, pickle, uuid
 import tornado.gen, tornado.ioloop, tornado.web, tornado.websocket
+import sqlalchemy.orm.exc
 from models import Model, Session, Simulation
+from work import create_simulation
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -29,12 +31,46 @@ class ModelCreateHandler(tornado.web.RequestHandler):
         session = Session()
         try:
             socket_id = str(uuid.uuid4())
-            sim = Simulation(model_id=model_id, socket_id=socket_id)
+            q = session.query(Model) \
+                       .filter_by(id=model_id) \
+                       .with_for_update().one()
+            data = pickle.dumps(
+                    create_simulation(q.system, q.name, q.inputs, q.outputs))
+            sim = Simulation(
+                    model_id=model_id,
+                    socket_id=socket_id,
+                    locked=False,
+                    data=data)
             session.add(sim)
+            session.flush()
             session.commit()
-        except:
+            self.write(json.dumps({
+                'status': 'success',
+                'sim_id': sim.id,
+                'model_id': model_id,
+                'socket_id': socket_id,
+            }))
+        except sqlalchemy.orm.exc.NoResultFound:
+            self.set_status(404)
+            self.write(json.dumps({
+                'status': 'error',
+                'error': f'no model found',
+            }))
             session.rollback()
-            raise
+        except sqlalchemy.orm.exc.MultipleResultsFound:
+            self.set_status(500)
+            self.write(json.dumps({
+                'status': 'error',
+                'error': f'multiple models found',
+            }))
+            session.rollback()
+        except Exception as e:
+            self.set_status(500)
+            self.write(json.dumps({
+                'status': 'error',
+                'error': str(e),
+            }))
+            session.rollback()
         finally:
             session.close()
 
