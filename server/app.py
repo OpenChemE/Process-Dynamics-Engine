@@ -95,6 +95,19 @@ class TagGetHandler(tornado.web.RequestHandler):
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
+    def send(self, message):
+        if self.sim_id == None:
+            print(f'Sent to socket {self.socket_id}: {message}')
+        else:
+            print(f'Sent to sim {self.sim_id}: {message}')
+        self.write_message(message)
+
+    def receive(self, message):
+        if self.sim_id == None:
+            print(f'Received from socket {self.socket_id}: {message}')
+        else:
+            print(f'Received from sim {self.sim_id}: {message}')
+
     def check_origin(self, origin):
         # Allow access from local development server.
         if origin == 'file://':
@@ -102,13 +115,65 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         return False
 
     def open(self, socket_id):
-        pass
+        self.sim_id = None
+        self.socket_id = socket_id
+
+        session = Session()
+        try:
+            q = session.query(Simulation) \
+                       .filter_by(socket_id=self.socket_id) \
+                       .with_for_update().one()
+            if q.locked:
+                self.send(f'Error: simulation {q.id} is currently locked. '
+                        + 'Another user may be connected at the same time.')
+                self.close()
+            else:
+                q.locked = True
+                session.commit()
+                self.sim_id = q.id
+                self.send('Successfully established connection.')
+        except sqlalchemy.orm.exc.NoResultFound:
+            self.send(f'Error: no model found with id {model_id}.')
+            self.close()
+        except sqlalchemy.orm.exc.MultipleResultsFound:
+            self.send(f'Error: multiple models found with id {model_id}.')
+            self.close()
+        except:
+            session.rollback()
+            self.close()
+            raise
+        finally:
+            session.close()
 
     def on_message(self, message):
-        pass
+        if self.sim_id != None:
+            try:
+                self.receive(message)
+            except tornado.websocket.WebSocketClosedError:
+                self.receive('WebSocket closed by client.')
+                pass
 
     def on_close(self):
-        pass
+        session = Session()
+        try:
+            q = session.query(Simulation) \
+                       .filter_by(socket_id=self.socket_id) \
+                       .with_for_update().one()
+            if not q.locked:
+                self.receive('Internal server error: sim is unsynchronized.')
+            elif self.sim_id != None:
+                q.locked = False
+                session.commit()
+                self.receive('Successfully terminated connection.')
+        except sqlalchemy.orm.exc.NoResultFound:
+            self.receive(f'Error: no model found with id {model_id}.')
+        except sqlalchemy.orm.exc.MultipleResultsFound:
+            self.receive(f'Error: multiple models found with id {model_id}.')
+        except:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 def make_app():
