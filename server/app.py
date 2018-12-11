@@ -27,6 +27,11 @@ class ModelListHandler(tornado.web.RequestHandler):
 
 class ModelCreateHandler(tornado.web.RequestHandler):
 
+    def set_default_headers(self):
+        self.set_header('Access-Control-Allow-Origin', '*')
+        self.set_header('Access-Control-Allow-Headers', 'x-requested-with')
+        self.set_header('Access-Control-Allow-Methods', 'POST')
+
     def post(self, model_id):
         session = Session()
         try:
@@ -116,6 +121,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def open(self, socket_id):
         self.sim_id = None
+        self.simulation = None
         self.socket_id = socket_id
 
         session = Session()
@@ -128,21 +134,27 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
                         + 'Another user may be connected at the same time.')
                 self.close()
             else:
+                self.sim_id = q.id
+                self.simulation = pickle.loads(q.data)
                 q.locked = True
                 session.commit()
-                self.sim_id = q.id
                 self.send('Successfully established connection.')
         except sqlalchemy.orm.exc.NoResultFound:
             self.send(f'Error: no model found with id {model_id}.')
+            session.rollback()
             self.close()
         except sqlalchemy.orm.exc.MultipleResultsFound:
             self.send(f'Error: multiple models found with id {model_id}.')
+            session.rollback()
             self.close()
-        except:
+        except Exception as e:
+            self.send(f'Error: {e}')
             session.rollback()
             self.close()
             raise
         finally:
+            self.sim_id = None
+            self.simulation = None
             session.close()
 
     def on_message(self, message):
@@ -163,6 +175,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
                 self.receive('Internal server error: sim is unsynchronized.')
             elif self.sim_id != None:
                 q.locked = False
+                q.data = pickle.dumps(self.simulation)
                 session.commit()
                 self.receive('Successfully terminated connection.')
         except sqlalchemy.orm.exc.NoResultFound:
