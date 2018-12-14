@@ -18,7 +18,6 @@ class Simulation:
 
     def reset(self):
         self.active = False
-        self.simulation = None
         self.time = np.linspace(
                 0, Simulation.MIN_TIME - 1, Simulation.MIN_TIME)
         self.inputs = np.zeros((self.model.system.inputs, Simulation.MIN_TIME))
@@ -28,12 +27,10 @@ class Simulation:
 
     def activate(self):
         if self.active:
-            assert self.simulation
             print(f'Simulation {self.sim_id} already active. ' +
                     'Call `reset()` to deactivate.')
         else:
             self.active = True
-            self.simulation = self.step_generator()
             print(f'Simulation {self.sim_id} activated. '+
                     'Call `step()` to run the simulation.')
 
@@ -53,28 +50,20 @@ class Simulation:
     def step(self):
         if not self.active:
             raise ValueError(f'Simulation {self.sim_id} must be activated.')
-        assert self.simulation
-        try:
-            # Get new outputs from the simulation step
-            T, yout = next(self.simulation)
+        if self.time[-1] > Simulation.MAX_TIME:
+            raise ValueError(f'Simulation {self.sim_id} ' +
+                    'exceeded the maximum simulation time.')
 
-            # We only use the last (newest) value in yout to update our output
-            # TODO: Switch to state space for iterative calculations
-            keys = list(self.model.outputs.keys())
-            for i, y in enumerate(yout[:, -1]):
-                self.model.outputs[keys[i]].value = y
-            return deepcopy(self.model.outputs)
+        # Get new outputs from the simulation step
+        self.time = np.append(self.time, self.time[-1] + 1)
+        self.inputs = np.column_stack((self.inputs,
+            [tag.value for tag in self.model.inputs.values()]))
+        T, yout, xout = control.forced_response(
+                self.model.system, self.time, self.inputs)
 
-        except StopIteration:
-            print('Error: Simulation not active or ' +
-                    'exceeded maximum simulation time.')
-
-
-    def step_generator(self):
-        while self.active and self.time[-1] < Simulation.MAX_TIME:
-            self.time = np.append(self.time, self.time[-1] + 1)
-            self.inputs = np.column_stack((self.inputs,
-                [tag.value for tag in self.model.inputs.values()]))
-            T, yout, xout = control.forced_response(
-                    self.model.system, self.time, self.inputs)
-            yield T, yout
+        # We only use the last (newest) value in yout to update our output
+        # TODO: Switch to state space for iterative calculations
+        keys = list(self.model.outputs.keys())
+        for i, y in enumerate(yout[:, -1]):
+            self.model.outputs[keys[i]].value = y
+        return deepcopy(self.model.outputs)
