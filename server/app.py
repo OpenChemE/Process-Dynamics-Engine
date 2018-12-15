@@ -2,7 +2,7 @@ import json, pickle, uuid
 import tornado.gen, tornado.ioloop, tornado.web, tornado.websocket
 import sqlalchemy.orm.exc
 from models import Model, Session, Simulation
-from work import create_simulation
+import wrapper
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -40,7 +40,7 @@ class ModelCreateHandler(tornado.web.RequestHandler):
                        .filter_by(id=model_id) \
                        .with_for_update().one()
             data = pickle.dumps(
-                    create_simulation(q.system, q.name, q.inputs, q.outputs))
+                    wrapper.create(q.system, q.name, q.inputs, q.outputs))
             sim = Simulation(
                     model_id=model_id,
                     socket_id=socket_id,
@@ -123,7 +123,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def open(self, socket_id):
         self.sim_id = None
-        self.simulation = None
+        self.sim = None
         self.socket_id = socket_id
 
         session = Session()
@@ -140,13 +140,13 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
                 self.close()
             else:
                 self.sim_id = q.id
-                self.simulation = pickle.loads(q.data)
+                self.sim = pickle.loads(q.data)
                 q.locked = True
                 session.commit()
-                if self.simulation.active:
-                    self.send({ 'message': 'active'})
+                if wrapper.is_active(self.sim):
+                    self.send({ 'message': 'active' })
                 else:
-                    self.send({ 'message': 'inactive'})
+                    self.send({ 'message': 'inactive' })
 
         except sqlalchemy.orm.exc.NoResultFound:
             self.send({
@@ -175,8 +175,13 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             if self.sim_id != None:
                 data = self.receive(message)
                 if data['message'] == 'activate':
-                    self.simulation.activate()
-                    self.send({ 'message': 'active'})
+                    wrapper.activate(self.sim)
+                    self.send({ 'message': 'active' })
+                else:
+                    self.send({
+                        'message': 'active',
+                        'outputs': wrapper.step(self.sim, data['inputs']),
+                    })
         except tornado.websocket.WebSocketClosedError:
             self.receive(json.dumps({
                 'message': 'backend',
@@ -198,7 +203,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
                 }))
             elif self.sim_id != None:
                 q.locked = False
-                q.data = pickle.dumps(self.simulation)
+                q.data = pickle.dumps(self.sim)
                 session.commit()
                 self.receive(json.dumps({
                     'message': 'backend',
@@ -224,7 +229,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             raise
         finally:
             self.sim_id = None
-            self.simulation = None
+            self.sim = None
             session.close()
 
 
