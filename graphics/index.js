@@ -1,6 +1,7 @@
 const ROOT_URL = 'localhost:8888';
 const MODEL_ID = 1;
 const INPUT_STEP_SIZE = 0.01;
+const TIME_STEP_SIZE_MS = 500;
 const RESET_STATE = {
   message: 'state',
   active: false,
@@ -11,6 +12,21 @@ const RESET_STATE = {
 };
 
 let state = Object.assign({}, RESET_STATE);
+
+function timeoutP(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function send(ws, obj) {
+  const message = JSON.stringify(obj);
+  console.log(`Sent to backend: ${message}`);
+  ws.send(message);
+}
+
+function receive(message) {
+  console.log(`Received from backend: ${message}`);
+  return JSON.parse(message);
+}
 
 async function createSim() {
   const response = await fetch(
@@ -24,9 +40,24 @@ async function activateSim() {
   const ws = new WebSocket(`ws://${ROOT_URL}/${socket_id}`);
   state = Object.assign({}, RESET_STATE);
   ws.onopen = async () => {
-    console.log('Clicked activateSim.');
-    console.log(state);
+    while (true) {
+      await timeoutP(TIME_STEP_SIZE_MS);
+      if (state.active) {
+        send(ws, state);
+      }
+    }
   };
+  ws.onmessage = (e) => {
+    const data = receive(e.data);
+    switch (data.message) {
+    case 'inactive':
+      send(ws, {message: 'activate'});
+      break;
+    case 'active':
+      state.active = true;
+      break;
+    }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
