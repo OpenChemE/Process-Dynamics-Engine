@@ -1,18 +1,32 @@
+const ROOT_URL = 'localhost:8888';
+const MODEL_ID = 1;
 const INPUT_STEP_SIZE = 0.01;
-let state = {
+const RESET_STATE = {
+  message: 'state',
+  active: false,
   inputs: {
     R: 0,
     S: 0,
   },
 };
 
-function createSim() {
-  console.log('Clicked createSim.');
+let state = Object.assign({}, RESET_STATE);
+
+async function createSim() {
+  const response = await fetch(
+      `http://${ROOT_URL}/models/${MODEL_ID}`, {method: 'POST'});
+  const json = await response.json();
+  document.getElementById('socket_id').value = json.socket_id;
 }
 
-function activateSim() {
-  console.log('Clicked activateSim.');
-  console.log(state);
+async function activateSim() {
+  const socket_id = document.getElementById('socket_id').value;
+  const ws = new WebSocket(`ws://${ROOT_URL}/${socket_id}`);
+  state = Object.assign({}, RESET_STATE);
+  ws.onopen = async () => {
+    console.log('Clicked activateSim.');
+    console.log(state);
+  };
 }
 
 document.addEventListener('DOMContentLoaded', () => {
