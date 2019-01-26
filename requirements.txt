@@ -1,0 +1,4 @@
+httpie==1.0.0
+SQLAlchemy==1.2.14
+tornado==5.1.1
+-e git+https://github.com/python-control/python-control@601b58152080d89575cc677474ec7714e1a34ee2#egg=control
