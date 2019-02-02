@@ -4,14 +4,10 @@ RUN apk add --no-cache \
     freetype-dev \
     git \
     openblas-dev
-WORKDIR /app
-ENV PYTHONPATH "${PYTHONPATH}:/app"
-COPY ./requirements.txt .
-RUN pip install --no-cache-dir --requirement requirements.txt
+RUN pip install --no-cache-dir -e git+https://github.com/python-control/python-control@601b58152080d89575cc677474ec7714e1a34ee2#egg=control
+RUN pip install --no-cache-dir slycot
 RUN apk del --no-cache \
     build-base \
     freetype-dev \
     git \
     openblas-dev
-COPY . .
-CMD ["python", "server/app.py"]

@@ -1,3 +1,2 @@
-.git/
-graphics/
-*/__pycache__/
+.git
+.dockerignore
