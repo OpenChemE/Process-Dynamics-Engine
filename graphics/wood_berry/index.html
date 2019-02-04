@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wood Berry Distillation Model</title>
+  <link href="index.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/epoch/0.8.4/css/epoch.min.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="wrapper">
+    <h1>Wood Berry Distillation Model</h1>
+    <div>
+      <button id="create">Create Simulation</button>
+      <input id="socket_id" type="text" />
+      <button id="activate">Activate Simulation</button>
+    </div>
+    <br>
+    <hr>
+  
+    <div class="row">
+      <div class="column-1">
+        <p id="top_text">Top Purity: <span id="top_value" class="value-display">0.0</span></p>
+        <p id="btm_text">Bottom Purity: <span id="btm_value" class="value-display">0.0</span></p>
+        <div id="graphics"></div>
+      </div>
+      <div class="column-2">
+        <div id="control-panel">
+          <p>Control Panel</p>
+          <button id="reflux_up">Reflux Up</button>
+          <button id="reflux_down">Reflux Down</button>
+          <button id="steam_up">Steam Up</button>
+          <button id="steam_down">Steam Down</button>
+        </div>
+        <hr>
+        <div>
+          <p>Steam: <span id="steam_value" class="value-display">0</span></p>
+          <div id="steam_chart" class="epoch"></div>
+          <p>Reflux: <span id="reflux_value" class="value-display">0</span></p>
+          <div id="reflux_chart" class="epoch"></div>
+        </div>
+      </div>    
+    </div>
+
+
+    <div>
+      <div id="bottoms_chart" class="epoch"></div>
+      <div id="distillate_chart" class="epoch"></div>
+    </div>
+  </div>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/epoch/0.8.4/js/epoch.min.js"></script>
+<script src="index.js"></script>
+</html>

@@ -111,10 +111,21 @@ async function activateSim() {
     case 'active':
       state.active = true;
       if (data.outputs) {
-        charts.x_D.push([{time, y: BASE_PURITY + data.outputs.x_D}]);
-        charts.x_B.push([{time, y: BASE_PURITY + data.outputs.x_B}]);
+        x_D = BASE_PURITY + data.outputs.x_D;
+        x_B = BASE_PURITY + data.outputs.x_B;
+
+        charts.x_D.push([{time, y: x_D}]);
+        charts.x_B.push([{time, y: x_B}]);
         charts.R.push([{time, y: state.inputs.R}]);
         charts.S.push([{time, y: state.inputs.S}]);
+
+        console.log(state.inputs)
+
+        document.getElementById('reflux_value').innerHTML = state.inputs.R.toFixed(2);
+        document.getElementById('steam_value').innerHTML = state.inputs.S.toFixed(2);
+        document.getElementById('top_value').innerHTML = x_D.toFixed(2);
+        document.getElementById('btm_value').innerHTML = x_B.toFixed(2);        
+
       }
       break;
     }
