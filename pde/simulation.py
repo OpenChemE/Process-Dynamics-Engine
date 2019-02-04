@@ -20,7 +20,7 @@ class Simulation:
         self.active = False
         self.time = np.linspace(
                 0, Simulation.MIN_TIME - 1, Simulation.MIN_TIME)
-        self.inputs = np.zeros((self.model.system.inputs, Simulation.MIN_TIME))
+        self.inputs = np.zeros((len(self.model.inputs), Simulation.MIN_TIME))
         print(f'Simulation {self.sim_id} of {self.model.name} created. ' +
                 'Call `activate()` to activate.')
 

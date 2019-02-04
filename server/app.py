@@ -39,8 +39,8 @@ class ModelCreateHandler(tornado.web.RequestHandler):
             q = session.query(Model) \
                        .filter_by(id=model_id) \
                        .with_for_update().one()
-            data = pickle.dumps(
-                    wrapper.create(q.system, q.name, q.inputs, q.outputs))
+            data = pickle.dumps(wrapper.create(
+                    q.name, q.system, q.inputs, q.outputs, model_id))
             sim = Simulation(
                     model_id=model_id,
                     socket_id=socket_id,
@@ -49,6 +49,7 @@ class ModelCreateHandler(tornado.web.RequestHandler):
             session.add(sim)
             session.flush()
             session.commit()
+            # TODO: update sim.data.sim_id field with sim.id
             self.write(json.dumps({
                 'status': 'success',
                 'sim_id': sim.id,
