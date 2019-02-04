@@ -111,8 +111,11 @@ async function activateSim() {
     case 'active':
       state.active = true;
       if (data.outputs) {
+        // TODO: Double check textbook, some sources say it's weight % (as in 0-100%) and not composition (0-1)
         x_D = BASE_PURITY + data.outputs.x_D;
-        x_B = BASE_PURITY + data.outputs.x_B;
+        // For clarity, we want to define x_B in terms of water % and not methanol %
+        // x_water = 1 - x_methanol
+        x_B = 1 - (BASE_PURITY + data.outputs.x_B);
 
         charts.x_D.push([{time, y: x_D}]);
         charts.x_B.push([{time, y: x_B}]);

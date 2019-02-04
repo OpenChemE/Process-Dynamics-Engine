@@ -9,6 +9,10 @@ body {
 	background-color: black;
 }
 
+.description{
+	text-align:left;
+}
+
 .column-1{
 	flex: 70%;
 	border: 1px solid black;
@@ -50,6 +54,31 @@ body {
   margin: 0 auto;
   text-align: center;
 }
+
+#feed_text{
+	position: absolute;
+	left: 50px;
+	top: 320px;	
+	max-width: 100px;
+	text-align: left;
+}
+
+#steam_text{
+	position: absolute;
+	left: 365px;
+	top: 530px;	
+	max-width: 100px;
+	text-align: left;
+}
+
+#reflux_text{
+	position: absolute;
+	left: 340px;
+	top: 340px;	
+	max-width: 100px;
+	text-align: left;
+}
+
 
 #btm_text{
 	position: absolute;

@@ -6,11 +6,17 @@
   <title>Wood Berry Distillation Model</title>
   <link href="index.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/epoch/0.8.4/css/epoch.min.css" rel="stylesheet">
+  <script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+  });
+  </script>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML' async></script>
 </head>
 <body>
 
 <div id="wrapper">
-    <h1>Wood Berry Distillation Model</h1>
+    <h1>OpenChemE Demo Column: Wood-Berry Model</h1>
     <div>
       <button id="create">Create Simulation</button>
       <input id="socket_id" type="text" />
@@ -21,9 +27,16 @@
   
     <div class="row">
       <div class="column-1">
-        <p id="top_text">Top Purity: <span id="top_value" class="value-display">0.0</span></p>
-        <p id="btm_text">Bottom Purity: <span id="btm_value" class="value-display">0.0</span></p>
+        <p id="top_text">Methanol, $x_D$ purity: <span id="top_value" class="value-display">0.0</span></p>
+        <p id="btm_text">Water, $x_B$ purity: <span id="btm_value" class="value-display">0.0</span></p>
+        <p id="feed_text"><b>Feed, $F$: </b> Water-Methanol mixture</p>
+        <p id="reflux_text"><b>Reflux, $R$</b></p>
+        <p id="steam_text"><b>Steam, $S$</b></p>
         <div id="graphics"></div>
+        <div>
+          <div id="bottoms_chart" class="epoch"></div>
+          <div id="distillate_chart" class="epoch"></div>
+        </div>        
       </div>
       <div class="column-2">
         <div id="control-panel">
@@ -35,19 +48,85 @@
         </div>
         <hr>
         <div>
-          <p>Steam: <span id="steam_value" class="value-display">0</span></p>
+          <p>Steam, $\Delta S$ lb/min: <span id="steam_value" class="value-display">0</span></p>
           <div id="steam_chart" class="epoch"></div>
-          <p>Reflux: <span id="reflux_value" class="value-display">0</span></p>
+          <p>Reflux, $\Delta R$ lb/min: <span id="reflux_value" class="value-display">0</span></p>
           <div id="reflux_chart" class="epoch"></div>
         </div>
       </div>    
     </div>
+    <hr>
+    <div class="description">
+      <p><b>Description</b></p>
+      <p>The Wood-Berry distillation model is a 2x2 transfer function matrix that describes the operation of a distillation column on a methanol-water system.</p>
+      <p><b>Equations</b></p>
+      <p>The 2 MVs are: Steam flow rate to the bottoms reboiler, $S$ in lb/min and reflux flow rate back to the column, $R$, in lb/min.</p>
+      <p>The 2 DVs are: Top and bottom methanol composition, $y_1$ and $y_2$ in weight % respectively. <br>For clarity, we define the purities as
+      <ul>
+        <li> $x_D = y_1$ for top composition in terms of <b>methanol</b> % purity</li> 
+        <li> $x_B = 1-y_2$ for bottom composition in terms of <b>water</b> % purity</li>
+      </ul>
+      <p>Mathematically, the system is written as:</p>
+      <p>
+        $$
+          \begin{bmatrix}
+          \Delta y_1\\
+          \Delta y_2 
+          \end{bmatrix}= 
+          \begin{bmatrix}
+          G_{11} & G_{12} \\
+          G_{21} & G_{22} 
+          \end{bmatrix}
+          \begin{bmatrix}
+          \Delta R \\
+          \Delta S 
+          \end{bmatrix}
+        $$
+      </p>
+      <p>with these FOPDT (first-order plus dead time) transfer functions:</p>
+      <p>
+        $$
+          \begin{bmatrix}
+          \Delta y_1\\
+          \Delta y_2 
+          \end{bmatrix}= 
+          \begin{bmatrix}
+          \frac{12.8e^{-s}}{16.7s+1} & \frac{-18.9e^{-3s}}{21s+1} \\
+          \frac{6.6e^{-7s}}{10.9s+1} & \frac{-19.4e^{-3s}}{14.4s+1}
+          \end{bmatrix}
+          \begin{bmatrix}
+          \Delta R \\
+          \Delta S 
+          \end{bmatrix}
+        $$        
+      </p>
+      <p><b>Intuition</b></p>
+      <p>In CHBE 345, we've focused mostly on learning the <b>design</b> of a distillation column. Now let's flip the scenario around and focus on the <b>operation of an existing distillation column</b>. The column has already been built with a fixed number of physical trays, reboiler capacity and condenser capacity. Forget everything you've learned about theoretical trays and the McCabe-Thiele method for now.</p>
+      <p>Since this is an existing column, you are only allowed to (1) adjust the reflux rate, (2) how much feed you put in, (3) how much products you draw out from the top and bottom, and (4) how much heat the reboiler provides and how much the condenser removes.</p>
 
+      <p><b>Scenario 1: Effects of Reflux</b></p>
+      <p>Consider the typical operation of a distillation column. If we increase the reflux ratio, we will send more methanol back into the column. The methanol returning to the column and flowing down will wash away some of the water molecules rising up in the vapors. This results in increased separation at the top and the methanol purity of the distillate, $x_D$ will go up.</p>
+      <p>However, we can't just increase the reflux ratio and expect everything else to stay the same in terms of mass balance. To maintain the same amount of distillate product flow, $D$, the overhead condenser would have to work harder and use more energy to condense more of the vapour coming out of the overhead. In addition, we'll have to vapourize more of the feed (or the bottoms) to send more vapour to the top of the column. Eventually, as we continue to increase reflux, we will also reach the physical capacity limit of the condenser. To further increase $R$ while maintaining $D$, we'll first have to buy a bigger condenser. There are also other issues like flooding the column that we should consider.</p>
+      <p>If we maintain the same bottoms flow rate at $B$, what's going to happen to the bottoms composition? From a mass balance perspective, we are now sending (1) more methanol and (2) more water washed with methanol back into the column. The column now contains more water and methanol flowing down. For this particular column and model, it turns out that there would be more methanol than water, so the bottoms are lighter and the water purity, $x_B$ will go down, all other things being equal.</p>
+      <p>You can use the simulation to see if our intuition is correct.</p>
+      <p>We can also rationalize the behaviour of this system from the transfer functions. At a constant $\Delta S = 0$, we have:</p>
+      <p>$$ \Delta x_D = \frac{12.8e^{-s}}{16.7s+1} \Delta R $$ </p>
+      <p>$$ \Delta x_B = -\frac{6.6e^{-7s}}{10.9s+1} \Delta R $$ </p>
+      <p>Recall that you can find the steady state gain in the $s$ domain (Hint: what is the Final Value Theorem? and when is it applicable?) from a unit step response of the transfer function. Using FVT, for every 0.01 lb/min gain in $R$, we expect the $x_D$ to increase by about 0.13 and $x_B$ to decrease by about half of that amount, around $0.07$.</p>
+      <p>Here are some questions to think about:
+        <ul>
+          <li>Based on the signs of the transfer functions, can you tell which DV would increase and which one would decrease if there's a unit positive change in the reflux and steam MVs?</li>
+          <li>The reflux has a stronger effect on one of the DVs, which one is it?</li>
+          <li>Which DV reaches the steady state sooner? Can you tell which one is it just by looking at the transfer functions?</li>
+        </ul>
+      <p>Use the simulator to verify your answers.</p>
+      </p>
 
-    <div>
-      <div id="bottoms_chart" class="epoch"></div>
-      <div id="distillate_chart" class="epoch"></div>
+      <p><b>Scenario 2: Effects of Steam</b></p>
+      <p>More to come...</p>
+      </p>
     </div>
+
   </div>
 </body>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js"></script>
