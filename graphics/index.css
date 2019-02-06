@@ -10,33 +10,41 @@ body {
 }
 
 #bottoms_chart {
-	position: absolute;
-	left: 20%;
-	top: 25%;
-	width: 30%;
-	height: 35%;
+    position: absolute;
+    left: 20%;
+    top: 25%;
+    width: 30%;
+    height: 35%;
 }
 
 #steam_chart {
-	position: absolute;
-	left: 20%;
-	top: 65%;
-	width: 30%;
-	height: 15%;
+    position: absolute;
+    left: 20%;
+    top: 65%;
+    width: 30%;
+    height: 15%;
 }
 
 #distillate_chart {
-	position: absolute;
-	right: 20%;
-	top: 25%;
-	width: 30%;
-	height: 35%;
+    position: absolute;
+    right: 20%;
+    top: 25%;
+    width: 30%;
+    height: 35%;
 }
 
 #reflux_chart {
-	position: absolute;
-	right: 20%;
-	top: 65%;
-	width: 30%;
-	height: 15%;
+    position: absolute;
+    right: 20%;
+    top: 65%;
+    width: 30%;
+    height: 15%;
+}
+
+#feed_chart {
+    position: absolute;
+    left: 20%;
+    top: 85%;
+    width: 60%;
+    height: 10%;
 }
