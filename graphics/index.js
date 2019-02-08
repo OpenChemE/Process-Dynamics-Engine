@@ -1,4 +1,4 @@
-const ROOT_URL = 'localhost:8888';
+const ROOT_URL = 'process-dynamics-engine.herokuapp.com';
 const MODEL_ID = 1;
 const BASE_PURITY = 0.5;
 const PURITY_RANGE = [0, 1];
