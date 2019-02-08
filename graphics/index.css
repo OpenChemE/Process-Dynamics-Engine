@@ -6,37 +6,8 @@ body {
 #wrapper {
   margin: 0 auto;
   max-width: 40em;
+}
+
+h1 {
   text-align: center;
-}
-
-#bottoms_chart {
-	position: absolute;
-	left: 20%;
-	top: 25%;
-	width: 30%;
-	height: 35%;
-}
-
-#steam_chart {
-	position: absolute;
-	left: 20%;
-	top: 65%;
-	width: 30%;
-	height: 15%;
-}
-
-#distillate_chart {
-	position: absolute;
-	right: 20%;
-	top: 25%;
-	width: 30%;
-	height: 35%;
-}
-
-#reflux_chart {
-	position: absolute;
-	right: 20%;
-	top: 65%;
-	width: 30%;
-	height: 15%;
 }

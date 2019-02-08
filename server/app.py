@@ -238,7 +238,7 @@ def make_app():
     # TODO: this is temporary code to initialize the available models
     session = Session()
     try:
-        f = open('wood_berry.pkl', 'rb')
+        f = open('models/wood_berry.pkl', 'rb')
         pickled_model = pickle.load(f)
         session.add(Model(
                 name='Wood-Berry Distillation',

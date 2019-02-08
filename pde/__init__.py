@@ -1,9 +1,5 @@
-from . import tag
-from . import model
-from . import simulation
-
-from .tag import *
-from .model import *
-from .simulation import *
+from .model import Model
+from .simulation import Simulation
+from .tag import Tag
 
 __version__ = '0.0.1'
