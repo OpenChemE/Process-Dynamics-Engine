@@ -35,24 +35,41 @@ class ModelCreateHandler(tornado.web.RequestHandler):
     def post(self, model_id):
         session = Session()
         try:
+            # Get the pickled model from the database
+            model_row = session.query(Model) \
+                               .filter_by(id=model_id) \
+                               .with_for_update().one()
+
+            # Generate a unique socket_id
             socket_id = str(uuid.uuid4())
-            q = session.query(Model) \
-                       .filter_by(id=model_id) \
-                       .with_for_update().one()
-            data = pickle.dumps(wrapper.create(
-                    q.name, q.system, q.inputs, q.outputs, model_id))
-            sim = Simulation(
+
+            # Create a new row in the database
+            sim_row = Simulation(
                     model_id=model_id,
                     socket_id=socket_id,
-                    locked=False,
-                    data=data)
-            session.add(sim)
+                    locked=False)
+
+            # Get the id of the simulation in the database
+            session.add(sim_row)
             session.flush()
+            sim_id = sim_row.id
+
+            # Create a new simulation object in Python
+            sim_obj = wrapper.create(
+                    model_row.name,
+                    model_row.system,
+                    model_row.inputs,
+                    model_row.outputs,
+                    model_id,
+                    sim_id)
+
+            # Pickle the simulation object into the database
+            sim_row.data = pickle.dumps(sim_obj)
             session.commit()
-            # TODO: update sim.data.sim_id field with sim.id
+
             self.write(json.dumps({
                 'status': 'success',
-                'sim_id': sim.id,
+                'sim_id': sim_id,
                 'model_id': model_id,
                 'socket_id': socket_id,
             }))
