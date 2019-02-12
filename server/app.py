@@ -56,12 +56,12 @@ class ModelCreateHandler(tornado.web.RequestHandler):
 
             # Create a new simulation object in Python
             sim_obj = wrapper.create(
+                    model_id,
+                    sim_id,
                     model_row.name,
                     model_row.system,
                     model_row.inputs,
-                    model_row.outputs,
-                    model_id,
-                    sim_id)
+                    model_row.outputs)
 
             # Pickle the simulation object into the database
             sim_row.data = pickle.dumps(sim_obj)

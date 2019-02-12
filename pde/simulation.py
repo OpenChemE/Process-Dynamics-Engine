@@ -1,7 +1,6 @@
 import control
 import numpy as np
 from copy import deepcopy
-from pde.model import Model
 
 
 class Simulation:
@@ -10,16 +9,19 @@ class Simulation:
     MAX_TIME = 1000
 
 
-    def __init__(self, model, sim_id):
-        self.model = model
+    def __init__(self, sim_id, model):
         self.sim_id = sim_id
+        self.model = model
         self.reset()
 
 
     def reset(self):
         self.active = False
         self.time = np.linspace(
-                0, Simulation.MIN_TIME - 1, Simulation.MIN_TIME)
+            0,
+            Simulation.MIN_TIME - 1,
+            Simulation.MIN_TIME,
+        )
         self.inputs = np.zeros((len(self.model.inputs), Simulation.MIN_TIME))
         print(f'Simulation {self.sim_id} of {self.model.name} created. ' +
                 'Call `activate()` to activate.')
@@ -63,6 +65,7 @@ class Simulation:
 
         # We only use the last (newest) value in yout to update our output
         # TODO: Switch to state space for iterative calculations
+        # TODO: Do we really need deepcopy?
         keys = list(self.model.outputs.keys())
         for i, y in enumerate(yout[:, -1]):
             self.model.outputs[keys[i]].value = y
