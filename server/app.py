@@ -1,6 +1,7 @@
 import json, os, pickle, uuid
 import tornado.gen, tornado.ioloop, tornado.web, tornado.websocket
 import sqlalchemy.orm.exc
+
 from models import Model, Session, Simulation
 import wrapper
 
@@ -9,12 +10,12 @@ class MainHandler(tornado.web.RequestHandler):
 
     def get(self):
         paragraphs = [
-                'Process Dynamics Engine API Reference:',
-                'GET /models/all: list all models',
-                'POST /models/{model_id}: create a new simulation',
-                'GET /sims/all: list all active simulations',
-                'GET /sims/{sim_id}: get simulation status',
-                'GET /sims/{sim_id}/{tag_id}: get tag status'
+            'Process Dynamics Engine API Reference:',
+            'GET /models/all: list all models',
+            'POST /models/{model_id}: create a new simulation',
+            'GET /sims/all: list all active simulations',
+            'GET /sims/{sim_id}: get simulation status',
+            'GET /sims/{sim_id}/{tag_id}: get tag status',
         ]
         self.write('<p>' + '</p><p>'.join(paragraphs) + '</p>')
 
@@ -45,23 +46,25 @@ class ModelCreateHandler(tornado.web.RequestHandler):
 
             # Create a new row in the database
             sim_row = Simulation(
-                    model_id=model_id,
-                    socket_id=socket_id,
-                    locked=False)
+                model_id=model_id,
+                socket_id=socket_id,
+                locked=False,
+            )
 
-            # Get the id of the simulation in the database
+            # Get the id of the row in the database
             session.add(sim_row)
             session.flush()
             sim_id = sim_row.id
 
             # Create a new simulation object in Python
             sim_obj = wrapper.create(
-                    model_id,
-                    sim_id,
-                    model_row.name,
-                    model_row.system,
-                    model_row.inputs,
-                    model_row.outputs)
+                model_id,
+                sim_id,
+                model_row.name,
+                model_row.system,
+                model_row.inputs,
+                model_row.outputs,
+            )
 
             # Pickle the simulation object into the database
             sim_row.data = pickle.dumps(sim_obj)
@@ -141,27 +144,33 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def open(self, socket_id):
         self.sim_id = None
-        self.sim = None
+        self.sim_obj = None
         self.socket_id = socket_id
 
         session = Session()
         try:
-            q = session.query(Simulation) \
-                       .filter_by(socket_id=self.socket_id) \
-                       .with_for_update().one()
-            if q.locked:
+            # Get the pickled simulation from the database
+            sim_row = session.query(Simulation) \
+                             .filter_by(socket_id=self.socket_id) \
+                             .with_for_update().one()
+
+            # Check that the simulation is not locked
+            if sim_row.locked:
                 self.send({
                     'message': 'error',
-                    'error': f'Error: simulation {q.id} is currently locked. '
+                    'error': f'Error: simulation {sim_row.id} is locked. '
                             + 'Another user is connected at the same time.',
                 })
                 self.close()
+
+            # Get the simulation object and lock the row in the database
             else:
-                self.sim_id = q.id
-                self.sim = pickle.loads(q.data)
-                q.locked = True
+                self.sim_id = sim_row.id
+                self.sim_obj = pickle.loads(sim_row.data)
+                sim_row.locked = True
                 session.commit()
-                if wrapper.is_active(self.sim):
+
+                if wrapper.is_active(self.sim_obj):
                     self.send({ 'message': 'active' })
                 else:
                     self.send({ 'message': 'inactive' })
@@ -193,12 +202,12 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             if self.sim_id != None:
                 data = self.receive(message)
                 if data['message'] == 'activate':
-                    wrapper.activate(self.sim)
+                    wrapper.activate(self.sim_obj)
                     self.send({ 'message': 'active' })
                 else:
                     self.send({
                         'message': 'active',
-                        'outputs': wrapper.step(self.sim, data['inputs']),
+                        'outputs': wrapper.step(self.sim_obj, data['inputs']),
                     })
         except tornado.websocket.WebSocketClosedError:
             self.receive(json.dumps({
@@ -211,22 +220,29 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def on_close(self):
         session = Session()
         try:
-            q = session.query(Simulation) \
-                       .filter_by(socket_id=self.socket_id) \
-                       .with_for_update().one()
-            if not q.locked:
+            # Get the pickled simulation from the database
+            sim_row = session.query(Simulation) \
+                             .filter_by(socket_id=self.socket_id) \
+                             .with_for_update().one()
+
+            # Check that the row in the database is locked
+            if not sim_row.locked:
                 self.receive(json.dumps({
                     'message': 'backend',
                     'status': 'Internal server error: sim is unsynchronized.',
                 }))
+
+            # Unlock the row in the database
             elif self.sim_id != None:
-                q.locked = False
-                q.data = pickle.dumps(self.sim)
+                sim_row.locked = False
+                sim_row.data = pickle.dumps(self.sim_obj)
                 session.commit()
                 self.receive(json.dumps({
                     'message': 'backend',
                     'status': 'Successfully terminated connection.',
                 }))
+
+            # Do nothing if self.sim_id is None
             else:
                 self.receive(json.dumps({
                     'message': 'backend',
@@ -247,7 +263,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             raise
         finally:
             self.sim_id = None
-            self.sim = None
+            self.sim_obj = None
             session.close()
 
 
@@ -258,10 +274,11 @@ def make_app():
         f = open('models/wood_berry.pkl', 'rb')
         pickled_model = pickle.load(f)
         session.add(Model(
-                name='Wood-Berry Distillation',
-                system=pickled_model.system,
-                inputs=pickled_model.inputs,
-                outputs=pickled_model.outputs))
+            name='Wood-Berry Distillation',
+            system=pickled_model.system,
+            inputs=pickled_model.inputs,
+            outputs=pickled_model.outputs,
+        ))
         session.commit()
     except:
         session.rollback()
@@ -277,7 +294,7 @@ def make_app():
         (r'/sims/all/?', SimulationListHandler),
         (r'/sims/(\d+)/?', SimulationGetHandler),
         (r'/sims/(\d+)/(\d+)/?', TagGetHandler),
-        (r'/([0-9a-f\-]+)', WebSocketHandler)
+        (r'/([0-9a-f\-]+)', WebSocketHandler),
     ])
 
 
