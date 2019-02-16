@@ -28,12 +28,19 @@ class ModelListHandler(tornado.web.RequestHandler):
 
 class ModelCreateHandler(tornado.web.RequestHandler):
 
+    def send(self, data):
+        text = json.dumps(data)
+        print(f'{data["status"]}: {data["message"]}')
+        print(f'    {text}')
+        self.write(text)
+
     def set_default_headers(self):
         self.set_header('Access-Control-Allow-Origin', '*')
         self.set_header('Access-Control-Allow-Headers', 'x-requested-with')
         self.set_header('Access-Control-Allow-Methods', 'POST')
 
     def post(self, model_id):
+        model_id = int(model_id)
         session = Session()
         try:
             # Get the pickled model from the database
@@ -70,32 +77,33 @@ class ModelCreateHandler(tornado.web.RequestHandler):
             sim_row.data = pickle.dumps(sim_obj)
             session.commit()
 
-            self.write(json.dumps({
+            self.send({
                 'status': 'success',
+                'message': 'created new simulation',
                 'sim_id': sim_id,
                 'model_id': model_id,
                 'socket_id': socket_id,
-            }))
+            })
         except sqlalchemy.orm.exc.NoResultFound:
             self.set_status(404)
-            self.write(json.dumps({
+            self.send({
                 'status': 'error',
-                'error': f'no model found',
-            }))
+                'message': 'no model found',
+            })
             session.rollback()
         except sqlalchemy.orm.exc.MultipleResultsFound:
             self.set_status(500)
-            self.write(json.dumps({
+            self.send({
                 'status': 'error',
-                'error': f'multiple models found',
-            }))
+                'message': 'multiple models found',
+            })
             session.rollback()
         except Exception as e:
             self.set_status(500)
-            self.write(json.dumps({
+            self.send({
                 'status': 'error',
-                'error': str(e),
-            }))
+                'message': str(e),
+            })
             session.rollback()
         finally:
             session.close()
@@ -121,20 +129,27 @@ class TagGetHandler(tornado.web.RequestHandler):
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
-    def send(self, obj):
-        message = json.dumps(obj)
+    def send(self, data):
+        text = json.dumps(data)
         if self.sim_id == None:
-            print(f'Sent to socket {self.socket_id}: {message}')
+            print(f'to socket {self.socket_id}, '
+                    + f'{data["status"]}: {data["message"]}')
+            print(f'    {text}')
         else:
-            print(f'Sent to sim {self.sim_id}: {message}')
-        self.write_message(message)
+            print(f'to sim {self.sim_id}, {data["status"]}: {data["message"]}')
+            print(f'    {text}')
+        self.write_message(text)
 
-    def receive(self, message):
+    def receive(self, text):
+        data = json.loads(text)
         if self.sim_id == None:
-            print(f'Received from socket {self.socket_id}: {message}')
+            print(f'from socket {self.socket_id}, '
+                    + f'{data["status"]}: {data["message"]}')
+            print(f'    {text}')
         else:
-            print(f'Received from sim {self.sim_id}: {message}')
-        return json.loads(message)
+            print(f'from sim {self.sim_id}, {data["status"]}: {data["message"]}')
+            print(f'    {text}')
+        return data
 
     def check_origin(self, origin):
         # Allow access from local development server.
@@ -157,9 +172,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             # Check that the simulation is not locked
             if sim_row.locked:
                 self.send({
-                    'message': 'error',
-                    'error': f'Error: simulation {sim_row.id} is locked. '
-                            + 'Another user is connected at the same time.',
+                    'status': 'error',
+                    'message': f'simulation {sim_row.id} is locked',
                 })
                 self.close()
 
@@ -171,29 +185,37 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
                 session.commit()
 
                 if wrapper.is_active(self.sim_obj):
-                    self.send({ 'message': 'active' })
+                    self.send({
+                        'status': 'active',
+                        'message': f'simulation {self.sim_id} is active',
+                    })
                 else:
-                    self.send({ 'message': 'inactive' })
+                    self.send({
+                        'status': 'inactive',
+                        'message': f'simulation {self.sim_id} is inactive',
+                    })
 
         except sqlalchemy.orm.exc.NoResultFound:
             self.send({
-                'message': 'error',
-                'error': f'Error: no sim found for {self.socket_id}.',
+                'status': 'error',
+                'message': f'no sim found for {self.socket_id}',
             })
             session.rollback()
             self.close()
         except sqlalchemy.orm.exc.MultipleResultsFound:
             self.send({
-                'message': 'error',
-                'error': f'Error: multiple sims found for {self.socket_id}.',
+                'status': 'error',
+                'message': 'multiple sims found for {self.socket_id}',
             })
             session.rollback()
             self.close()
         except Exception as e:
-            self.send({ 'message': 'error', 'error': str(e) })
+            self.send({
+                'status': 'error',
+                'message': str(e),
+            })
             session.rollback()
             self.close()
-            raise
         finally:
             session.close()
 
@@ -201,21 +223,28 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         try:
             if self.sim_id != None:
                 data = self.receive(message)
-                if data['message'] == 'activate':
+                if data['status'] == 'activate':
                     wrapper.activate(self.sim_obj)
-                    self.send({ 'message': 'active' })
+                    self.send({
+                        'status': 'active',
+                        'message': f'activated simulation {self.sim_id}',
+                    })
                 else:
                     self.send({
-                        'message': 'active',
+                        'status': 'active',
+                        'message': 'step',
                         'outputs': wrapper.step(self.sim_obj, data['inputs']),
                     })
         except tornado.websocket.WebSocketClosedError:
             self.receive(json.dumps({
-                'message': 'backend',
-                'status': 'WebSocket closed by client.',
+                'status': 'backend',
+                'message': 'websocket closed by client',
             }))
         except Exception as e:
-            print(e)
+            self.receive({
+                'status': 'error',
+                'message': str(e),
+            })
 
     def on_close(self):
         session = Session()
@@ -228,8 +257,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             # Check that the row in the database is locked
             if not sim_row.locked:
                 self.receive(json.dumps({
-                    'message': 'backend',
-                    'status': 'Internal server error: sim is unsynchronized.',
+                    'status': 'error',
+                    'message': 'internal server error, sim unsynchronized',
                 }))
 
             # Unlock the row in the database
@@ -238,29 +267,32 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
                 sim_row.data = pickle.dumps(self.sim_obj)
                 session.commit()
                 self.receive(json.dumps({
-                    'message': 'backend',
-                    'status': 'Successfully terminated connection.',
+                    'status': 'backend',
+                    'message': 'successfully terminated connection',
                 }))
 
             # Do nothing if self.sim_id is None
             else:
                 self.receive(json.dumps({
-                    'message': 'backend',
-                    'status': 'Successfully terminated connection.',
+                    'status': 'backend',
+                    'message': 'successfully terminated connection',
                 }))
         except sqlalchemy.orm.exc.NoResultFound:
             self.receive(json.dumps({
-                'message': 'error',
-                'error': f'Error: no sim found for {self.socket_id}.',
+                'status': 'error',
+                'message': f'no sim found for {self.socket_id}',
             }))
         except sqlalchemy.orm.exc.MultipleResultsFound:
             self.receive(json.dumps({
-                'message': 'error',
-                'error': f'Error: multiple sims found for {self.socket_id}.',
+                'status': 'error',
+                'message': 'multiple sims found for {self.socket_id}',
             }))
-        except:
+        except Exception as e:
+            self.receive(json.dumps({
+                'status': 'error',
+                'message': str(e),
+            }))
             session.rollback()
-            raise
         finally:
             self.sim_id = None
             self.sim_obj = None

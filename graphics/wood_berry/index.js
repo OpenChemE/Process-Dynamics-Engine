@@ -4,10 +4,12 @@ const BASE_PURITY = 0.5;
 const FEED_RANGE = [-1, 1];
 const PURITY_RANGE = [0, 1];
 const ACTION_RANGE = [-0.1, 0.1];
+const FEED_STEP_SIZE = 0.05;
 const ACTION_STEP_SIZE = 0.01;
 const TIME_STEP_SIZE_MS = 1000;
 const RESET_STATE = {
-  message: 'state',
+  status: 'frontend',
+  message: 'current state',
   active: false,
   inputs: {
     R: 0,
@@ -82,22 +84,41 @@ function timeoutP(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function send(ws, obj) {
-  const message = JSON.stringify(obj);
-  console.log(`Sent to backend: ${message}`);
-  ws.send(message);
+function send(ws, data) {
+  const text = JSON.stringify(data);
+  console.log(`to backend, ${data.status}: ${data.message}`);
+  console.log(data);
+  ws.send(text);
 }
 
-function receive(message) {
-  console.log(`Received from backend: ${message}`);
-  return JSON.parse(message);
+function receive(text) {
+  const data = JSON.parse(text);
+  console.log(`from backend, ${data.status}: ${data.message}`);
+  console.log(data);
+  return data;
 }
 
 async function createSim() {
   const response = await fetch(
       `http://${ROOT_URL}/models/${MODEL_ID}`, {method: 'POST'});
-  const json = await response.json();
-  document.getElementById('socket_id').value = json.socket_id;
+  let socket_id;
+  try {
+    const json = await response.json();
+    receive(JSON.stringify({
+      'status': 'success',
+      'message': 'created new simulation',
+      'sim_id': json.sim_id,
+      'model_id': json.model_id,
+      'socket_id': json.socket_id,
+    }));
+    socket_id = json.socket_id;
+  } catch (e) {
+    receive(JSON.stringify({
+      'status': 'error',
+      'message': e,
+    }));
+  }
+  document.getElementById('socket_id').value = socket_id;
 }
 
 async function activateSim() {
@@ -115,9 +136,12 @@ async function activateSim() {
   ws.onmessage = (e) => {
     const data = receive(e.data);
     const time = new Date().getTime() / 1000;
-    switch (data.message) {
+    switch (data.status) {
     case 'inactive':
-      send(ws, {message: 'activate'});
+      send(ws, {
+        status: 'activate',
+        message: `activate simulation with socket ${socket_id}`,
+      });
       break;
     case 'active':
       state.active = true;
@@ -146,6 +170,6 @@ document.addEventListener('DOMContentLoaded', () => {
   incrementInput('reflux_down', 'R', -ACTION_STEP_SIZE);
   incrementInput('steam_up', 'S', ACTION_STEP_SIZE);
   incrementInput('steam_down', 'S', -ACTION_STEP_SIZE);
-  incrementInput('feed_up', 'F', ACTION_STEP_SIZE);
-  incrementInput('feed_down', 'F', -ACTION_STEP_SIZE);
+  incrementInput('feed_up', 'F', FEED_STEP_SIZE);
+  incrementInput('feed_down', 'F', -FEED_STEP_SIZE);
 });

@@ -43,7 +43,6 @@ class Simulation:
         for key in inputs:
             try:
                 self.model.inputs[key].value = inputs[key]
-                print(f'Updated tag {key} to: {inputs[key]}.')
             except KeyError:
                 print(f'Tag {key} not found in inputs.')
 
