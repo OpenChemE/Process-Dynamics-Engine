@@ -1,7 +1,6 @@
 import control
 from collections import OrderedDict
-from pde.model import Model
-from pde.tag import TagType, Tag
+from pde import Model, Tag, TagType
 
 
 def WoodBerry(model_id):
@@ -20,12 +19,16 @@ def WoodBerry(model_id):
 
     sys = control.tf([row_1_num, row_2_num], [row_1_den, row_2_den])
 
-    R = Tag(0, 'Reflux', 'Reflux flow rate', TagType.INPUT)
-    S = Tag(1, 'Steam', 'Steam flow rate', TagType.INPUT)
-    F = Tag(2, 'Feed', 'Feed flow rate', TagType.INPUT)
-    x_D = Tag(3, 'x_D', 'Distillate purity', TagType.OUTPUT)
-    x_B = Tag(4, 'x_B', 'Bottoms purity', TagType.OUTPUT)
+    R = Tag(1, 'Reflux', 'Reflux flow rate', TagType.INPUT)
+    S = Tag(2, 'Steam', 'Steam flow rate', TagType.INPUT)
+    F = Tag(3, 'Feed', 'Feed flow rate', TagType.INPUT)
+    x_D = Tag(4, 'x_D', 'Distillate purity', TagType.OUTPUT)
+    x_B = Tag(5, 'x_B', 'Bottoms purity', TagType.OUTPUT)
 
-    return Model('Wood-Berry Distillation Model', sys,
-            OrderedDict([('R', R), ('S', S), ('F', F)]),
-            OrderedDict([('x_D', x_D), ('x_B', x_B)]), model_id)
+    return Model(
+        model_id,
+        'Wood-Berry Distillation Model',
+        sys,
+        OrderedDict([('R', R), ('S', S), ('F', F)]),
+        OrderedDict([('x_D', x_D), ('x_B', x_B)]),
+    )

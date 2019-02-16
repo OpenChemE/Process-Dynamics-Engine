@@ -1,8 +1,9 @@
 from pde import Model, Simulation, Tag
 
-def create(name, system, inputs, outputs, model_id):
-    model = Model(name, system, inputs, outputs, model_id)
-    return Simulation(model, -1)
+
+def create(model_id, sim_id, name, system, inputs, outputs):
+    model = Model(model_id, name, system, inputs, outputs)
+    return Simulation(sim_id, model)
 
 def is_active(sim):
     return sim.active
